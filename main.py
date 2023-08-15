@@ -56,9 +56,8 @@ def get_snapshot_metadatas(subvol, device, return_as_list=True):
     snapshot_location = subvol_confdir + "/snapshots/"
     metadatas = []
 
-    if os.listdir(snapshot_location) == 0:
-        print("No snapshot found")
-        sys.exit(1)
+    if len(os.listdir(snapshot_location)) == 0:
+        print("No snapshots found")
     else:
         for snapshot in os.listdir(snapshot_location):
             with open(
@@ -73,22 +72,25 @@ def get_snapshot_metadatas(subvol, device, return_as_list=True):
     if return_as_list is True:
         return metadatas
     else:
-        print("| No.\t| Date\t\t\t\t| Description")
-        for metadata in range(len(metadatas)):
-            snp_date_obj = datetime.strptime(
-                metadatas[metadata]["date"], "%Y-%m-%dT%H:%M:%S"
-            )
-            local_tz = get_localzone()
-            snp_date_local = snp_date_obj.replace(tzinfo=pytz.utc).astimezone(local_tz)
-            snp_date = datetime.strftime(snp_date_local, "%a %b %d %Y %H:%M:%S %p")
-            print(
-                "| "
-                + metadatas[metadata]["number"]
-                + "\t| "
-                + snp_date
-                + "\t| "
-                + metadatas[metadata]["description"]
-            )
+        if len(metadatas) > 0:
+            print("| No.\t| Date\t\t\t\t| Description")
+            for metadata in range(len(metadatas)):
+                snp_date_obj = datetime.strptime(
+                    metadatas[metadata]["date"], "%Y-%m-%dT%H:%M:%S"
+                )
+                local_tz = get_localzone()
+                snp_date_local = snp_date_obj.replace(tzinfo=pytz.utc).astimezone(
+                    local_tz
+                )
+                snp_date = datetime.strftime(snp_date_local, "%a %b %d %Y %H:%M:%S %p")
+                print(
+                    "| "
+                    + metadatas[metadata]["number"]
+                    + "\t| "
+                    + snp_date
+                    + "\t| "
+                    + metadatas[metadata]["description"]
+                )
 
 
 def get_next_snapshot_number(dir):
@@ -205,36 +207,57 @@ def parser():
     subparser = parser.add_subparsers(dest="action")
 
     parser.add_argument("-s", "--subvolume", help="Specify subvolume", required=True)
-    parser.add_argument("-d", "--device", help="Specify subvolume", required=True)
+    parser.add_argument("-b", "--device", help="Specify subvolume", required=True)
 
     c_config_parser = subparser.add_parser("create-config", help="Create a config")
     d_config_parser = subparser.add_parser("delete-config", help="Delete a config")
 
-    take_snp_parser = subparser.add_parser("take-snapshot", help="Take a snapshot")
-    take_snp_parser.add_argument(
-        "--description", help="Specify description", default="No description given"
+    t_snap_parser = subparser.add_parser("take-snapshot", help="Take a snapshot")
+    t_snap_parser.add_argument(
+        "-d",
+        "--description",
+        help="Specify description",
+        default="No description given",
     )
 
-    d_snp_parser = subparser.add_parser("delete-snapshot", help="Delete a snapshot")
-    d_snp_num = d_snp_parser.add_argument("snapshot_number")
+    d_snap_parser = subparser.add_parser("delete-snapshot", help="Delete a snapshot")
+    d_snap_num = d_snap_parser.add_argument("snapshot_number")
 
     rollback_parser = subparser.add_parser("rollback", help="Rollback to snapshot")
     rollback_num = rollback_parser.add_argument("snapshot_number")
 
-    list_snp_parser = subparser.add_parser("list-snapshots", help="List snapshots")
+    l_snap_parser = subparser.add_parser("list-snapshots", help="List snapshots")
 
     args = parser.parse_args()
 
     if args.action == "create-config":
         create_config(args.subvolume, args.device)
-        print("Creating config")
     elif args.action == "take-snapshot":
         take_snapshot(args.subvolume, args.device, args.description)
-        print("taking snapshot")
     elif args.action == "delete-snapshot":
-        delete_snapshot(args.subvolume, args.device, args.snapshot_number)
+        confirmation = input(
+            "Are you sure you want to delete snapshot "
+            + args.snapshot_number
+            + " from "
+            + args.device
+            + " subvolume "
+            + args.subvolume
+            + "? "
+        )
+        if confirmation.lower() in ["y", "yes", "yup", "yep", "roger"]:
+            delete_snapshot(args.subvolume, args.device, args.snapshot_number)
     elif args.action == "rollback":
-        rollback(args.subvolume, args.device, args.snapshot_number)
+        confirmation = input(
+            "Are you sure you want to rollback subvolume "
+            + args.subvolume
+            + " on "
+            + args.device
+            + " to snapshot #"
+            + args.snapshot_number
+            + "? "
+        )
+        if confirmation.lower() in ["y", "yes", "yup", "yep", "roger"]:
+            rollback(args.subvolume, args.device, args.snapshot_number)
     elif args.action == "list-snapshots":
         get_snapshot_metadatas(args.subvolume, args.device, return_as_list=False)
     elif args.action == "delete-config":

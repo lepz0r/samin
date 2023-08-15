@@ -204,8 +204,8 @@ def parser():
     parser = argparse.ArgumentParser(description="btrfs snapshot manager")
     subparser = parser.add_subparsers(dest="action")
 
-    parser.add_argument("--subvolume", help="Specify subvolume", required=True)
-    parser.add_argument("--device", help="Specify subvolume", required=True)
+    parser.add_argument("-s", "--subvolume", help="Specify subvolume", required=True)
+    parser.add_argument("-d", "--device", help="Specify subvolume", required=True)
 
     c_config_parser = subparser.add_parser("create-config", help="Create a config")
     d_config_parser = subparser.add_parser("delete-config", help="Delete a config")

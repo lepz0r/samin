@@ -21,7 +21,7 @@ options:
 ## Example
 Create a config for a subvolume
 ```
-#python3 main.py  --subvolume @home --device /dev/sda1 create-config
+# python3 main.py --subvolume @home --device /dev/sda1 create-config
 Creating config
 ```
 Take a snapshot
@@ -31,9 +31,9 @@ taking snapshot
 ```
 Delete a snapshot
 ```
-# python3 main.py  --subvolume @ --device /dev/sda1 delete-snapshot 1
+# python3 main.py --subvolume @ --device /dev/sda1 delete-snapshot 1
 ```
 Rollback to a snapshot
 ```
-# python3 main.py  --subvolume @ --device /dev/sda1 rollback 1
+# python3 main.py --subvolume @ --device /dev/sda1 rollback 1
 ```

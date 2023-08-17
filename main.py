@@ -1,7 +1,6 @@
 import btrfsutil
 import json
 import os
-import sys
 import argparse
 import shutil
 import subprocess
@@ -48,7 +47,7 @@ def umnt(mountpoint):
     subprocess.check_call(["umount", mountpoint])
 
 
-def get_snapshot_metadatas(subvol, device, return_as_list=True):
+def get_snapshot_metadatas(subvol, device, utc=False):
     subvol_confdir = get_subvol_conf(subvol)
     root_mountpoint = get_root_mountpoint()
 
@@ -64,33 +63,41 @@ def get_snapshot_metadatas(subvol, device, return_as_list=True):
                 subvol_confdir + "/snapshots/" + snapshot + "/metadata.json"
             ) as metadata:
                 current_metadata = json.loads(metadata.read())
+                date_obj = datetime.strptime(
+                    current_metadata["date"], "%Y-%m-%dT%H:%M:%S"
+                )
+                if utc is False:
+                    local_tz = get_localzone()
+                    current_metadata["date"] = date_obj.replace(
+                        tzinfo=pytz.utc
+                    ).astimezone(local_tz)
+                else:
+                    current_metadata["date"] = date_obj
                 current_metadata["number"] = snapshot
                 metadatas.append(current_metadata)
 
     umnt(root_mountpoint)
 
-    if return_as_list is True:
-        return metadatas
-    else:
-        if len(metadatas) > 0:
-            print("| No.\t| Date\t\t\t\t| Description")
-            for metadata in range(len(metadatas)):
-                snp_date_obj = datetime.strptime(
-                    metadatas[metadata]["date"], "%Y-%m-%dT%H:%M:%S"
-                )
-                local_tz = get_localzone()
-                snp_date_local = snp_date_obj.replace(tzinfo=pytz.utc).astimezone(
-                    local_tz
-                )
-                snp_date = datetime.strftime(snp_date_local, "%a %b %d %Y %H:%M:%S %p")
-                print(
-                    "| "
-                    + metadatas[metadata]["number"]
-                    + "\t| "
-                    + snp_date
-                    + "\t| "
-                    + metadatas[metadata]["description"]
-                )
+    return metadatas
+
+
+def list_snapshots(subvol, device, utc=False):
+    metadatas: list
+    metadatas = get_snapshot_metadatas(subvol, device, utc)
+    if len(metadatas) > 0:
+        print("| No.\t| Date\t\t\t\t| Description")
+        for metadata in range(len(metadatas)):
+            snp_date = datetime.strftime(
+                metadatas[metadata]["date"], "%a %b %d %Y %H:%M:%S %p"
+            )
+            print(
+                "| "
+                + metadatas[metadata]["number"]
+                + "\t| "
+                + snp_date
+                + "\t| "
+                + metadatas[metadata]["description"]
+            )
 
 
 def get_next_snapshot_number(dir):
@@ -208,6 +215,12 @@ def parser():
 
     parser.add_argument("-s", "--subvolume", help="Specify subvolume", required=True)
     parser.add_argument("-b", "--device", help="Specify subvolume", required=True)
+    parser.add_argument(
+        "-u",
+        "--utc",
+        action="store_true",
+        help="Show time in UTC instead of local time",
+    )
 
     c_config_parser = subparser.add_parser("create-config", help="Create a config")
     d_config_parser = subparser.add_parser("delete-config", help="Delete a config")
@@ -258,8 +271,9 @@ def parser():
         )
         if confirmation.lower() in ["y", "yes", "yup", "yep", "roger"]:
             rollback(args.subvolume, args.device, args.snapshot_number)
+            print("Remount the subvolume or reboot to finish")
     elif args.action == "list-snapshots":
-        get_snapshot_metadatas(args.subvolume, args.device, return_as_list=False)
+        list_snapshots(args.subvolume, args.device, args.utc)
     elif args.action == "delete-config":
         delete_config(args.subvolume, args.device)
 

@@ -146,24 +146,54 @@ def delete_config(subvol, device):
     umnt(root_mountpoint)
 
 
-def take_snapshot(subvol, device, desc="No description given"):
+def create_snapshot_dir(subvol, desc):
     subvol_conf = get_subvol_conf(subvol)
-    metadata = generate_snapshot_metadata(desc)
     root_mountpoint = get_root_mountpoint()
-
-    mount_root_mountpoint(root_mountpoint, device)
-    os.makedirs(subvol_conf + "snapshots", exist_ok=True)
+    metadata = generate_snapshot_metadata(desc)
     next_snapshot_number = get_next_snapshot_number(subvol_conf + "/snapshots")
-    snapshot_dir = subvol_conf + "/snapshots/" + next_snapshot_number
+    snapshot_dir = subvol_conf + "snapshots/" + next_snapshot_number
     os.makedirs(snapshot_dir, exist_ok=True)
-    btrfsutil.create_snapshot(
-        root_mountpoint + subvol,
-        subvol_conf + "/snapshots/" + next_snapshot_number + "/snapshot",
-        read_only=True,
-    )
 
     with open(snapshot_dir + "/metadata.json", "w") as output:
         json.dump(metadata, output, indent=2)
+
+    return snapshot_dir
+
+
+def take_snapshot(subvol, device, desc="No description given"):
+    root_mountpoint = get_root_mountpoint()
+
+    mount_root_mountpoint(root_mountpoint, device)
+
+    snapshot_dir = create_snapshot_dir(subvol, desc)
+
+    btrfsutil.create_snapshot(
+        root_mountpoint + subvol,
+        snapshot_dir + "/snapshot",
+        read_only=True,
+    )
+
+    umnt(root_mountpoint)
+
+
+def rollback(subvol, device, snapshot_number):
+    subvol_conf = get_subvol_conf(subvol)
+    root_mountpoint = get_root_mountpoint()
+
+    mount_root_mountpoint(root_mountpoint, device)
+
+    snapshot_dir = create_snapshot_dir(
+        subvol, "rolled back to " + snapshot_number
+    )
+
+    os.rename(
+        root_mountpoint + subvol,
+        snapshot_dir + "/snapshot",
+    )
+    btrfsutil.create_snapshot(
+        subvol_conf + "snapshots/" + snapshot_number + "/" + "snapshot",
+        root_mountpoint + subvol,
+    )
 
     umnt(root_mountpoint)
 
@@ -182,32 +212,6 @@ def delete_snapshot(subvol, device, snapshot_number, no_mount_op=False):
 
     if no_mount_op is True:
         umnt(root_mountpoint)
-
-
-def rollback(subvol, device, snapshot_number):
-    subvol_conf = get_subvol_conf(subvol)
-    root_mountpoint = get_root_mountpoint()
-
-    mount_root_mountpoint(root_mountpoint, device)
-    metadata = generate_snapshot_metadata("rolled back to " + snapshot_number)
-
-    os.makedirs(subvol_conf + "snapshots", exist_ok=True)
-    next_snapshot_number = get_next_snapshot_number(subvol_conf + "/snapshots")
-    snapshot_dir = subvol_conf + "/snapshots/" + next_snapshot_number
-    os.makedirs(snapshot_dir, exist_ok=True)
-    os.rename(
-        root_mountpoint + subvol,
-        subvol_conf + "snapshots/" + next_snapshot_number + "/snapshot",
-    )
-    btrfsutil.create_snapshot(
-        subvol_conf + "snapshots/" + snapshot_number + "/" + "snapshot",
-        root_mountpoint + subvol,
-    )
-
-    with open(snapshot_dir + "/metadata.json", "w") as output:
-        json.dump(metadata, output, indent=2)
-
-    umnt(root_mountpoint)
 
 
 # Parser

@@ -28,10 +28,15 @@ def generate_snapshot_metadata(desc):
 
 
 def mnt(device, mountpoint):
+    get_fs_command = ["blkid", "-o", "value", "-s", "TYPE", device]
+    filesystem = subprocess.check_output(get_fs_command)
+
+    if filesystem != b"btrfs\n":
+        raise Exception("Filesystem is not btrfs")
     try:
         if os.path.ismount(mountpoint) is False:
-            command = ["mount", "-o", "subvolid=0", device, mountpoint]
-            subprocess.check_call(command)
+            mnt_command = ["mount", "-o", "subvolid=0", device, mountpoint]
+            subprocess.check_call(mnt_command)
             return True
     except subprocess.CalledProcessError as e:
         print(e.output)
@@ -120,9 +125,6 @@ def create_config(subvol, device):
         btrfsutil.create_subvolume(confdir)
 
     os.makedirs(subvol_confdir + "/snapshots", exist_ok=True)
-
-    # with open(subvol_confdir+'config.json', 'w') as output:
-    #  json.dump(metadata,output)
 
     umnt(root_mountpoint)
 

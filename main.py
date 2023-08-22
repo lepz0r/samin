@@ -5,6 +5,7 @@ import argparse
 import shutil
 import subprocess
 import pytz
+import psutil
 from pathlib import Path
 from datetime import datetime
 from tzlocal import get_localzone
@@ -41,6 +42,15 @@ def mnt(device, mountpoint):
     except subprocess.CalledProcessError as e:
         print(e.output)
         return False
+
+
+def check_if_mounted(subvol):
+    partitions = psutil.disk_partitions()
+    subvolid = btrfsutil.subvolume_info(subvol).id
+
+    for i in partitions:
+        if str(subvolid) in i.opts:
+            return True
 
 
 def mount_root_mountpoint(root_mountpoint, device):
@@ -182,9 +192,7 @@ def rollback(subvol, device, snapshot_number):
 
     mount_root_mountpoint(root_mountpoint, device)
 
-    snapshot_dir = create_snapshot_dir(
-        subvol, "rolled back to " + snapshot_number
-    )
+    snapshot_dir = create_snapshot_dir(subvol, "rolled back to " + snapshot_number)
 
     os.rename(
         root_mountpoint + subvol,
@@ -205,10 +213,19 @@ def delete_snapshot(subvol, device, snapshot_number, no_mount_op=False):
     if no_mount_op is False:
         mount_root_mountpoint(root_mountpoint, device)
 
-    btrfsutil.delete_subvolume(
-        subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
-    )
-    shutil.rmtree(subvol_confdir + "snapshots/" + snapshot_number)
+    if (
+        check_if_mounted(
+            subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
+        )
+        is True
+    ):
+        umnt(root_mountpoint)
+        raise Exception("Snapshot is still mounted")
+    else:
+        btrfsutil.delete_subvolume(
+            subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
+        )
+        shutil.rmtree(subvol_confdir + "snapshots/" + snapshot_number)
 
     if no_mount_op is True:
         umnt(root_mountpoint)

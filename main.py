@@ -206,26 +206,48 @@ def rollback(subvol, device, snapshot_number):
     umnt(root_mountpoint)
 
 
-def delete_snapshot(subvol, device, snapshot_number, no_mount_op=False):
+def map_snapshot_list(input):
+    inputs = map(str, input.split(","))
+    outputs = []
+    for i in inputs:
+        if "-" in i:
+            start, end = map(int, i.split("-"))
+            my_range = range(start, end + 1, +1)
+            for n in my_range:
+                outputs.append(n)
+        else:
+            outputs.append(i)
+
+    return outputs
+
+
+def delete_snapshot(subvol, device, snapshot_numbers, no_mount_op=False):
     subvol_confdir = get_subvol_conf(subvol)
     root_mountpoint = get_root_mountpoint()
+    snapshots = map_snapshot_list(snapshot_numbers)
 
     if no_mount_op is False:
         mount_root_mountpoint(root_mountpoint, device)
 
-    if (
-        check_if_mounted(
-            subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
-        )
-        is True
-    ):
-        umnt(root_mountpoint)
-        raise Exception("Snapshot is still mounted")
-    else:
-        btrfsutil.delete_subvolume(
-            subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
-        )
-        shutil.rmtree(subvol_confdir + "snapshots/" + snapshot_number)
+    for snapshot in snapshots:
+        snapshot_number = str(snapshot)
+        if (
+            check_if_mounted(
+                subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
+            )
+            is True
+        ):
+            print(
+                "Not removing snapshot #"
+                + snapshot_number
+                + ": snapshot is still mounted"
+            )
+
+        else:
+            btrfsutil.delete_subvolume(
+                subvol_confdir + "snapshots/" + snapshot_number + "/" + "snapshot"
+            )
+            shutil.rmtree(subvol_confdir + "snapshots/" + snapshot_number)
 
     if no_mount_op is True:
         umnt(root_mountpoint)

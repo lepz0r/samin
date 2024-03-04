@@ -1,5 +1,19 @@
+# samin
+Just a simple snapshot utility for btrfs 
+
+## Requirements
+```
+btrfsutil
+pytz
+tzlocal
+psutil
+```
+
+## Installation
+`pip install .`
+
 ## Usage
-``` 
+```
 btrfs snapshot manager
 
 positional arguments:
@@ -13,27 +27,31 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --subvolume SUBVOLUME
+  -s SUBVOLUME, --subvolume SUBVOLUME
                         Specify subvolume
-  --device DEVICE       Specify subvolume
+  -b DEVICE, --device DEVICE
+                        Specify subvolume
+  -d, --debug           Enable debugging
+  -u, --utc             Show time in UTC instead of local time
 ```
+
 
 ## Example
 Create a config for a subvolume
 ```
-# python3 main.py --subvolume @home --device /dev/sda1 create-config
+# python -m samin --subvolume @home --device /dev/sda1 create-config
 Creating config
 ```
 Take a snapshot
 ```
-# python3 main.py --subvolume @ --device /dev/sda1 take-snapshot
+# python -m samin --subvolume @ --device /dev/sda1 take-snapshot
 taking snapshot
 ```
 Delete a snapshot
 ```
-# python3 main.py --subvolume @ --device /dev/sda1 delete-snapshot 1
+# python -m samin --subvolume @ --device /dev/sda1 delete-snapshot 1
 ```
 Rollback to a snapshot
 ```
-# python3 main.py --subvolume @ --device /dev/sda1 rollback 1
+# python -m samin --subvolume @ --device /dev/sda1 rollback 1
 ```

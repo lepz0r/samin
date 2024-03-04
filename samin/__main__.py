@@ -3,6 +3,8 @@
 import argparse
 import logging
 import subprocess
+import os
+import psutil
 
 
 def get_fs_type(device):
@@ -11,13 +13,21 @@ def get_fs_type(device):
     return filesystem
 
 
+def get_block(path):
+    path = os.path.abspath(path)
+    while not os.path.ismount(path):
+        path = os.path.dirname(path)
+    p = [p for p in psutil.disk_partitions(all=True) if p.mountpoint == path.__str__()]
+    return p[0].device
+
+
 # Parser
 def parser():
     parser = argparse.ArgumentParser(description="btrfs snapshot manager")
     subparser = parser.add_subparsers(dest="action")
 
-    parser.add_argument("-s", "--subvolume", help="Specify subvolume", required=True)
-    parser.add_argument("-b", "--device", help="Specify subvolume", required=True)
+    parser.add_argument("-s", "--subvolume", help="Specify subvolume")
+    parser.add_argument("-b", "--device", help="Specify subvolume")
     parser.add_argument("-d", "--debug", help="Enable debugging", action="store_true")
     parser.add_argument(
         "-u",
@@ -46,10 +56,28 @@ def parser():
 
     args = parser.parse_args()
 
-    filesystem = get_fs_type(args.device)
+    return args
+
+
+def main_func():
+    args = parser()
+
+    if args.device is not None:
+        device = args.device
+    else:
+        device = get_block("/")
+
+    filesystem = get_fs_type(device)
+
+    subvolume = args.subvolume
 
     if filesystem == b"btrfs\n":
-        import btrfs as fs
+        import samin.btrfs as fs
+
+        if args.subvolume is not None:
+            subvolume = args.subvolume
+        else:
+            subvolume = fs.get_subvolume("/")
     else:
         raise Exception("Filesystem is not supported")
 
@@ -57,39 +85,39 @@ def parser():
         logging.basicConfig(level=logging.DEBUG)
 
     if args.action == "create-config":
-        fs.create_config(args.subvolume, args.device)
+        fs.create_config(subvolume, device)
     elif args.action == "take-snapshot":
-        fs.take_snapshot(args.subvolume, args.device, args.description)
+        fs.take_snapshot(subvolume, device, args.description)
     elif args.action == "delete-snapshot":
         confirmation = input(
             "Are you sure you want to delete snapshot "
             + args.snapshot_number
             + " from "
-            + args.device
+            + device
             + " subvolume "
-            + args.subvolume
+            + subvolume
             + "? "
         )
         if confirmation.lower() in ["y", "yes", "yup", "yep", "roger"]:
-            fs.delete_snapshot(args.subvolume, args.device, args.snapshot_number)
+            fs.delete_snapshot(subvolume, device, args.snapshot_number)
     elif args.action == "rollback":
         confirmation = input(
             "Are you sure you want to rollback subvolume "
-            + args.subvolume
+            + subvolume
             + " on "
-            + args.device
+            + device
             + " to snapshot #"
             + args.snapshot_number
             + "? "
         )
         if confirmation.lower() in ["y", "yes", "yup", "yep", "roger"]:
-            fs.rollback(args.subvolume, args.device, args.snapshot_number)
+            fs.rollback(subvolume, device, args.snapshot_number)
             print("Remount the subvolume or reboot to finish")
     elif args.action == "list-snapshots":
-        fs.list_snapshots(args.subvolume, args.device, args.utc)
+        fs.list_snapshots(subvolume, device, args.utc)
     elif args.action == "delete-config":
-        fs.delete_config(args.subvolume, args.device)
+        fs.delete_config(subvolume, device)
 
 
 if __name__ == "__main__":
-    parser()
+    main_func()

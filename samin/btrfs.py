@@ -38,6 +38,10 @@ def generate_snapshot_metadata(desc):
     return metadata
 
 
+def get_subvolume(path):
+    return btrfsutil.subvolume_path(path)
+
+
 def mnt(device, mountpoint):
     get_fs_command = ["blkid", "-o", "value", "-s", "TYPE", device]
     filesystem = subprocess.check_output(get_fs_command)
@@ -82,7 +86,7 @@ def get_snapshot_metadatas(subvol, device, utc=False):
     root_mountpoint = get_root_mountpoint()
 
     mount_root_mountpoint(root_mountpoint, device)
-    snapshot_location = subvol_confdir + "/snapshots/"
+    snapshot_location = subvol_confdir + "snapshots/"
     metadatas = []
 
     if len(os.listdir(snapshot_location)) == 0:
@@ -90,7 +94,7 @@ def get_snapshot_metadatas(subvol, device, utc=False):
     else:
         for snapshot in os.listdir(snapshot_location):
             with open(
-                subvol_confdir + "/snapshots/" + snapshot + "/metadata.json"
+                subvol_confdir + "snapshots/" + snapshot + "/metadata.json"
             ) as metadata:
                 current_metadata = json.loads(metadata.read())
                 logging.debug("Found snapshot metadata: " + str(current_metadata))

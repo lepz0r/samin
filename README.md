@@ -10,7 +10,19 @@ psutil
 ```
 
 ## Installation
-`pip install .`
+### Arch Linux
+This program is available on AUR, you can install this program using an AUR helper for example how to install this program using paru:
+```
+paru -S samin
+```
+Also check out [samin-pacman-hook](https://gitlab.com/lepz0r/samin-pacman-hook) also avaible on AUR to automatically take a snapshot after running pacman.
+
+### Manual
+
+
+```
+pip install .
+```
 
 ## Usage
 ```

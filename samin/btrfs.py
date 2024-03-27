@@ -159,7 +159,8 @@ def create_config(subvol, device):
         btrfsutil.create_subvolume(confdir)
 
     logging.debug("Creating subvolume config")
-    os.makedirs(subvol_confdir + "/snapshots", exist_ok=True)
+    os.makedirs(subvol_confdir, exist_ok=True)
+    btrfsutil.create_subvolume(subvol_confdir + "/snapshots")
 
     umnt(root_mountpoint)
 
@@ -177,6 +178,7 @@ def delete_config(subvol, device):
             delete_snapshot(subvol, device, snapshot_number, False)
 
     logging.debug("Deleting config")
+    btrfsutil.create_subvolume(subvol_confdir + "/snapshots")
     shutil.rmtree(subvol_confdir)
 
     umnt(root_mountpoint)

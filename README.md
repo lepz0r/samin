@@ -1,7 +1,9 @@
 # samin
-Just a simple snapshot utility for btrfs 
+
+Just a simple snapshot utility for btrfs
 
 ## Requirements
+
 ```
 btrfsutil
 pytz
@@ -10,21 +12,25 @@ psutil
 ```
 
 ## Installation
+
 ### Arch Linux
+
 This program is available on AUR, you can install this program using an AUR helper for example how to install this program using paru:
+
 ```
 paru -S samin
 ```
+
 Also check out [samin-pacman-hook](https://gitlab.com/lepz0r/samin-pacman-hook) also avaible on AUR to automatically take a snapshot after running pacman.
 
 ### Manual
-
 
 ```
 pip install .
 ```
 
 ## Usage
+
 ```
 btrfs snapshot manager
 
@@ -47,23 +53,40 @@ options:
   -u, --utc             Show time in UTC instead of local time
 ```
 
-
 ## Example
-Create a config for a subvolume
+
+#### Create a config for a subvolume
+
 ```
 # python -m samin --subvolume @home --device /dev/sda1 create-config
 Creating config
 ```
-Take a snapshot
+
+#### Take a snapshot
+
 ```
 # python -m samin --subvolume @ --device /dev/sda1 take-snapshot
 taking snapshot
 ```
-Delete a snapshot
+
+#### Delete a snapshot
+
 ```
 # python -m samin --subvolume @ --device /dev/sda1 delete-snapshot 1
 ```
-Rollback to a snapshot
+
+You can also specify multiple snapshots to delete-snapshot
+
+```
+# python -m samin --subvolume @ --device /dev/sda1 delete-snapshot 1-9
+```
+
+```
+# python -m samin --subvolume @ --device /dev/sda1 delete-snapshot 2,4,6,8
+```
+
+#### Rollback to a snapshot
+
 ```
 # python -m samin --subvolume @ --device /dev/sda1 rollback 1
 ```
